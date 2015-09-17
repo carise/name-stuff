@@ -6,6 +6,8 @@ dbhost = 'mongodb://localhost:27017'
 # TODO: server-side mongo host
 mongoclient = MongoClient(dbhost)
 db = mongoclient.namestuff
+db.person.create_index([('name', pymongo.ASCENDING), ('gender', pymongo.ASCENDING)], unique=True)
+db.popularity.create_index([('person_id', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
 
 FILENAME_PATTERN = re.compile('yob(\d\d\d\d)\.txt')
 
@@ -15,23 +17,23 @@ def load_data(filename, dest_dir):
     m = FILENAME_PATTERN.match(filename)
     year = None
     if m:
-      year = m.group(1)
+      print 'loading '+str(filename)
+      year = int(m.group(1))
       with open(os.path.join(dest_dir, filename)) as f:
         lines = f.readlines()
         for line in lines:
-          (name, gender, count) = line.split(',')
+          (name, gender, count) = line.strip().split(',')
           person = None
-          try:
-            person = db.person.find_one({'name': name, 'gender': gender})
-            person_id = None
-            if not person:
-              person_id = db.person.insert_one({'name': name, 'gender': gender}).inserted_id
-            else:
-              person_id = person['_id']
-
-            db.popularity.insert_one({'person_id': person_id, 'year': year, 'count': count})
-          except Exception as e:
-            print e
+          #try:
+          person = db.person.find_one({'name': name, 'gender': gender})
+          person_id = None
+          if not person:
+            person_id = db.person.insert_one({'name': name, 'gender': gender}).inserted_id
+          else:
+            person_id = person['_id']
+          db.popularity.insert_one({'person_id': person_id, 'year': year, 'count': int(count)})
+          #except Exception as e:
+          #  print e
 
 def unzip(filename, dest_dir):
   with zipfile.ZipFile(filename) as zf:
